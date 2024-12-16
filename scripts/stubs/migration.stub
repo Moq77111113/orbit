@@ -1,8 +1,5 @@
 import { sql } from 'kysely';
 import { Kysely } from 'kysely';
-import { typeid } from 'typeid-js';
-
-const prefix = () => typeid('{{PREFIX}}');
 
 export async function up(db: Kysely<any>) {
   await db.schema
