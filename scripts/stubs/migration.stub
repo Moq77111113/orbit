@@ -1,0 +1,22 @@
+import { sql } from 'kysely';
+import { Kysely } from 'kysely';
+import { typeid } from 'typeid-js';
+
+const prefix = () => typeid('{{PREFIX}}');
+
+export async function up(db: Kysely<any>) {
+  await db.schema
+    .createTable('{{TABLE_NAME}}')
+    .addColumn('id', 'varchar', (col) => col.primaryKey())
+    .addColumn('created_at', 'timestamp', (col) =>
+      col.defaultTo(sql`current_timestamp`).notNull()
+    )
+    .addColumn('updated_at', 'timestamp', (col) =>
+      col.defaultTo(sql`current_timestamp`).notNull()
+    )
+    .execute();
+}
+
+export async function down(db: Kysely<any>) {
+  await db.schema.dropTable('{{TABLE_NAME}}').execute();
+}
