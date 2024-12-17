@@ -3,88 +3,88 @@
  * Please do not edit it manually.
  */
 
-import type { ColumnType } from "kysely";
+import type { ColumnType } from 'kysely';
 
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+	? ColumnType<S, I | undefined, U>
+	: ColumnType<T, T | undefined, T>;
 
 export interface Activity {
-  created_at: Generated<string>;
-  date: string;
-  description: string | null;
-  host_id: string | null;
-  id: string;
-  name: string;
-  type_id: string | null;
-  updated_at: Generated<string>;
+	created_at: Generated<string>;
+	date: string;
+	description: string | null;
+	host_id: string | null;
+	id: string;
+	name: string;
+	type_id: string | null;
+	updated_at: Generated<string>;
 }
 
 export interface ActivityCategory {
-  activity_id: string | null;
-  category_id: string | null;
+	activity_id: string | null;
+	category_id: string | null;
 }
 
 export interface ActivityGuest {
-  activity_id: string | null;
-  guest_id: string | null;
+	activity_id: string | null;
+	guest_id: string | null;
 }
 
 export interface ActivityType {
-  created_at: Generated<string>;
-  id: string;
-  name: string;
-  updated_at: Generated<string>;
+	created_at: Generated<string>;
+	id: string;
+	name: string;
+	updated_at: Generated<string>;
 }
 
 export interface Category {
-  created_at: Generated<string>;
-  description: string | null;
-  id: string;
-  name: string;
-  parent_id: string | null;
-  updated_at: Generated<string>;
+	created_at: Generated<string>;
+	description: string | null;
+	id: string;
+	name: string;
+	parent_id: string | null;
+	updated_at: Generated<string>;
 }
 
 export interface Item {
-  category_id: string | null;
-  created_at: Generated<string>;
-  id: string;
-  name: string;
-  note: string | null;
-  quantity: number | null;
-  updated_at: Generated<string>;
+	category_id: string | null;
+	created_at: Generated<string>;
+	id: string;
+	name: string;
+	note: string | null;
+	quantity: number | null;
+	updated_at: Generated<string>;
 }
 
 export interface ItemClaim {
-  claim_id: string | null;
-  item_id: string | null;
+	claim_id: string | null;
+	item_id: string | null;
 }
 
 export interface Person {
-  created_at: Generated<string>;
-  id: string;
-  name: string;
-  profile_image: string | null;
-  updated_at: Generated<string>;
-  user_id: string | null;
+	created_at: Generated<string>;
+	id: string;
+	name: string;
+	profile_image: string | null;
+	updated_at: Generated<string>;
+	user_id: string | null;
 }
 
 export interface User {
-  created_at: Generated<string>;
-  email: string;
-  id: string;
-  updated_at: Generated<string>;
+	created_at: Generated<string>;
+	email: string;
+	id: string;
+	updated_at: Generated<string>;
 }
 
 export interface DB {
-  activity: Activity;
-  activity_category: ActivityCategory;
-  activity_guest: ActivityGuest;
-  activity_type: ActivityType;
-  category: Category;
-  item: Item;
-  item_claim: ItemClaim;
-  person: Person;
-  user: User;
+	activity: Activity;
+	activity_category: ActivityCategory;
+	activity_guest: ActivityGuest;
+	activity_type: ActivityType;
+	category: Category;
+	item: Item;
+	item_claim: ItemClaim;
+	person: Person;
+	user: User;
 }
