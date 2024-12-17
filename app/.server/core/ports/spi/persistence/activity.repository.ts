@@ -7,11 +7,9 @@ type ActivityQuery = {
 };
 
 type ActivityCommand = {
-  create(
-    activity: Omit<Activity, 'createdAt' | 'updatedAt'>
-  ): Promise<Activity>;
+  create(activity: Activity): Promise<Activity>;
   update(
-    activity: Omit<Activity, 'createdAt' | 'updatedAt'>
+    activity: Pick<Activity, 'id' | 'date' | 'description' | 'name'>
   ): Promise<Activity>;
   delete(id: ActivityId): Promise<void>;
 };

@@ -1,5 +1,4 @@
 import type { Optional } from '../types/utils';
-import type { CategoryId } from './category';
 
 import type { Person, PersonId } from './person';
 
@@ -11,10 +10,7 @@ export interface Activity {
   date: Date;
   host_id: PersonId;
   description: Optional<string>;
-  rootCategoryId: CategoryId;
   guestIds: PersonId[];
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface DetailledActivity {
