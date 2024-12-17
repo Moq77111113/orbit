@@ -5,11 +5,6 @@ import type { Person, PersonId } from '~/.server/core/models/person';
 import type { UserId } from '~/.server/core/models/user';
 import { jsonBuildObject } from 'kysely/helpers/sqlite';
 import type { DB } from '../types/db';
-import { c } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
-
-type PersonRepositoryContext = {
-  db: Kysely<DB>;
-};
 
 const query = (db: Kysely<DB>) =>
   db
@@ -26,12 +21,11 @@ const query = (db: Kysely<DB>) =>
     ]);
 
 type PersonWithUser = InferResult<ReturnType<typeof query>>[number];
-export function KyselyPersonRepository(
-  context: PersonRepositoryContext
-): PersonRepository {
-  const { db } = context;
 
-  function toDomain(person: PersonWithUser): Person {
+export class KyselyPersonRepository implements PersonRepository {
+  constructor(protected readonly db: Kysely<DB>) {}
+
+  #toDomain(person: PersonWithUser): Person {
     const { id, profile_image, user, name } = person;
     return {
       name,
@@ -47,20 +41,22 @@ export function KyselyPersonRepository(
     };
   }
 
-  async function find(id: PersonId) {
-    const person = await query(db).where('person.id', '=', id).executeTakeFirst();
+  async find(id: PersonId) {
+    const person = await query(this.db)
+      .where('person.id', '=', id)
+      .executeTakeFirst();
     if (!person) return null;
-    return toDomain(person);
+    return this.#toDomain(person);
   }
 
-  async function findOrThrow(id: PersonId) {
-    const person = await find(id);
+  async #findOrThrow(id: PersonId) {
+    const person = await this.find(id);
     if (!person) throw new Error(`Person with id ${id} not found`);
     return person;
   }
 
-  async function create(person: Person) {
-    const inserted = await db
+  async create(person: Person) {
+    const inserted = await this.db
       .insertInto('person')
       .values({
         ...person,
@@ -69,12 +65,12 @@ export function KyselyPersonRepository(
       .returning('id')
       .executeTakeFirstOrThrow();
 
-    return await findOrThrow(inserted.id as PersonId);
+    return await this.#findOrThrow(inserted.id as PersonId);
   }
 
-  async function update(person: Person) {
+  async update(person: Person) {
     const { id, user, ...rest } = person;
-    const updated = await db
+    const updated = await this.db
       .updateTable('person')
       .returning('id')
       .set({
@@ -84,14 +80,6 @@ export function KyselyPersonRepository(
       .where('id', '=', person.id)
       .executeTakeFirstOrThrow();
 
-    return await findOrThrow(updated.id as PersonId);
+    return await this.#findOrThrow(updated.id as PersonId);
   }
-
-  return {
-    find,
-    create,
-    update,
-  };
 }
-
-export type KyselyPersonRepository = ReturnType<typeof KyselyPersonRepository>;

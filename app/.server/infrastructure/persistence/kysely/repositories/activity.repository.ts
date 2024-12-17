@@ -4,11 +4,6 @@ import crypto from 'node:crypto';
 import type { ActivityRepository } from '~/.server/core/ports/spi/persistence/activity.repository';
 import type { Activity, ActivityId } from '~/.server/core/models/activity';
 import type { PersonId } from '~/.server/core/models/person';
-import type { r } from 'node_modules/@react-router/dev/dist/routes-DHIOx0R9';
-
-type ActivityRepositoryContext = {
-  db: Kysely<DB>;
-};
 
 const query = (db: Kysely<DB>) =>
   db
@@ -31,14 +26,10 @@ const query = (db: Kysely<DB>) =>
     ]);
 
 type ActivityWithGuests = InferResult<ReturnType<typeof query>>[number];
+export class KyselyActivityRepository implements ActivityRepository {
+  constructor(protected readonly db: Kysely<DB>) {}
 
-
-export function KyselyActivityRepository(
-  context: ActivityRepositoryContext
-): ActivityRepository {
-  const { db } = context;
-
-  function toDomain(activity: ActivityWithGuests): Activity {
+  #toDomain(activity: ActivityWithGuests): Activity {
     const { id, guestIds, host_id, ...rest } = activity;
     const guestIdsArray = guestIds.split(',').filter(Boolean); // TODO: parse using zod or similar
     return {
@@ -49,33 +40,34 @@ export function KyselyActivityRepository(
       guestIds: guestIdsArray.map((guestId) => guestId as PersonId),
     };
   }
-  async function find(id: ActivityId) {
-    const activity = await query(db)
+
+  async find(id: ActivityId) {
+    const activity = await query(this.db)
       .where('activity.id', '=', id)
       .executeTakeFirst();
     if (!activity) return null;
-    return toDomain(activity);
+    return this.#toDomain(activity);
   }
 
-  async function findOrThrow(id: ActivityId) {
-    const activity = await find(id);
+  async #findOrThrow(id: ActivityId) {
+    const activity = await this.find(id);
     if (!activity) {
       throw new Error(`Activity with id ${id} not found`);
     }
     return activity;
   }
 
-  async function findByHost(hostId: PersonId) {
-    const activities = await query(db)
+  async findByHost(hostId: PersonId) {
+    const activities = await query(this.db)
       .where('activity.host_id', '=', hostId)
       .groupBy(['activity.id'])
       .execute();
-    return activities.map(toDomain);
+    return activities.map(this.#toDomain.bind(this));
   }
 
-  async function create(activity: Activity) {
+  async create(activity: Activity) {
     const { type, guestIds, ...rest } = activity;
-    const trx = await db.transaction().execute(async (trx) => {
+    const trx = await this.db.transaction().execute(async (trx) => {
       const type = await trx
         .insertInto('activity_type')
         .values({
@@ -110,14 +102,14 @@ export function KyselyActivityRepository(
       return created;
     });
 
-    return await findOrThrow(trx.id as ActivityId);
+    return await this.#findOrThrow(trx.id as ActivityId);
   }
 
-  async function update(
+  async update(
     activity: Pick<Activity, 'id' | 'date' | 'description' | 'name'>
   ) {
     const { id, ...rest } = activity;
-    const updated = await db
+    const updated = await this.db
       .updateTable('activity')
       .returning('id')
       .set({
@@ -126,18 +118,10 @@ export function KyselyActivityRepository(
       })
       .where('id', '=', activity.id)
       .executeTakeFirstOrThrow();
-    return await findOrThrow(updated.id as ActivityId);
+    return await this.#findOrThrow(updated.id as ActivityId);
   }
 
-  async function deleteActivity(id: ActivityId) {
-    await db.deleteFrom('activity').where('id', '=', id).execute();
+  async delete(id: ActivityId) {
+    await this.db.deleteFrom('activity').where('id', '=', id).execute();
   }
-
-  return {
-    find,
-    findByHost,
-    create,
-    update,
-    delete: deleteActivity,
-  };
 }

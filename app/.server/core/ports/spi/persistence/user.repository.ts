@@ -1,7 +1,9 @@
 import type { User, UserId } from '~/core/models/user';
 
-type UserQuery = {
+export interface UserRepository {
+  find(id: UserId): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
-};
-
-export type UserRepository = Repository<UserId, User, UserQuery>;
+  create(user: User): Promise<User>;
+  update(user: User): Promise<User>;
+  delete(id: UserId): Promise<void>;
+}

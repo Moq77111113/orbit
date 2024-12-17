@@ -5,7 +5,8 @@ import type {
   CategoryId,
 } from '~/core/models/category';
 
-type CategoryQuery = {
+type CreateCategory = Omit<Category, 'id'>;
+export interface CategoryRepository {
   find(id: CategoryId): Promise<Category | null>;
   findChildren(id: CategoryId): Promise<Category[]>;
   findHierarchy(
@@ -13,11 +14,6 @@ type CategoryQuery = {
     depth?: number
   ): Promise<CategoryHierarchy | null>;
   findByActivityId(activityId: ActivityId): Promise<Category[]>;
-};
-
-type CategoryCommand = {
-  create(category: Category): Promise<Category>;
+  create(category: CreateCategory): Promise<Category>;
   update(category: Category): Promise<Category>;
-};
-
-export type CategoryRepository = CategoryQuery & CategoryCommand;
+}

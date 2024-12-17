@@ -1,16 +1,12 @@
 import type { InferResult, Kysely } from 'kysely';
-import type { DB } from '../types/db';
+import type { ActivityId } from '~/.server/core/models/activity';
 import type {
   Category,
   CategoryHierarchy,
   CategoryId,
 } from '~/.server/core/models/category';
 import type { CategoryRepository } from '~/.server/core/ports/spi/persistence/category.repository';
-import type { ActivityId } from '~/.server/core/models/activity';
-
-type CategoryRepositoryContext = {
-  db: Kysely<DB>;
-};
+import type { DB } from '../types/db';
 
 const query = (db: Kysely<DB>) =>
   db
@@ -24,12 +20,10 @@ const query = (db: Kysely<DB>) =>
 
 type CategoryWithParent = InferResult<ReturnType<typeof query>>[number];
 
-export function KyselyCategoryRepository(
-  context: CategoryRepositoryContext
-): CategoryRepository {
-  const { db } = context;
+export class KyselyCategoryRepository implements CategoryRepository {
+  constructor(protected readonly db: Kysely<DB>) {}
 
-  function toDomain(category: CategoryWithParent): Category {
+  #toDomain(category: CategoryWithParent): Category {
     const { id, name, description, parent_id } = category;
 
     return {
@@ -40,47 +34,50 @@ export function KyselyCategoryRepository(
     };
   }
 
-  async function find(id: CategoryId) {
-    const category = await query(db)
+  async find(id: CategoryId) {
+    const category = await query(this.db)
       .where('category.id', '=', id)
       .executeTakeFirst();
     if (!category) return null;
-    return toDomain(category);
+    return this.#toDomain(category);
   }
 
-  async function findChildren(id: CategoryId) {
-    const children = await query(db)
+  async findChildren(id: CategoryId) {
+    const children = await query(this.db)
       .where('category.parent_id', '=', id)
       .execute();
-    return children.map(toDomain);
+    return children.map(this.#toDomain.bind(this));
   }
 
-  async function findChildrenRecursive(
+  async #findChildrenRecursive(
     parentId: CategoryId,
     remainingDepth: number
   ): Promise<(Category & { children: Category[] })[]> {
     if (remainingDepth <= 0) return [];
 
-    const directChildren = await findChildren(parentId);
+    const directChildren = await this.findChildren(parentId);
 
     const childrenWithGrandChildren = await Promise.all(
       directChildren.map(async (child) => ({
         ...child,
-        children: await findChildrenRecursive(child.id, remainingDepth - 1),
+        children: await this.#findChildrenRecursive(
+          child.id,
+          remainingDepth - 1
+        ),
       }))
     );
 
     return childrenWithGrandChildren;
   }
 
-  async function findHierarchy(
+  async findHierarchy(
     id: CategoryId,
     depth = 2
   ): Promise<CategoryHierarchy | null> {
-    const category = await find(id);
+    const category = await this.find(id);
     if (!category) return null;
 
-    const children = await findChildrenRecursive(id, depth);
+    const children = await this.#findChildrenRecursive(id, depth);
 
     return {
       category,
@@ -89,8 +86,8 @@ export function KyselyCategoryRepository(
     };
   }
 
-  async function findByActivityId(activityId: ActivityId) {
-    const categories = await db
+  async findByActivityId(activityId: ActivityId) {
+    const categories = await this.db
       .selectFrom('activity_category')
       .innerJoin('category', 'category.id', 'activity_category.category_id')
       .where('activity_category.activity_id', '=', activityId)
@@ -102,37 +99,28 @@ export function KyselyCategoryRepository(
       ])
       .execute();
 
-    return categories.map(toDomain);
+    return categories.map(this.#toDomain.bind(this));
   }
 
-  async function create(category: Category) {
-    const inserted = await db
+  async create(category: Category) {
+    const inserted = await this.db
       .insertInto('category')
       .returningAll()
       .values(category)
       .executeTakeFirstOrThrow();
 
-    return toDomain(inserted);
+    return this.#toDomain(inserted);
   }
 
-  async function update(category: Category) {
+  async update(category: Category) {
     const { id, ...rest } = category;
-    const updated = await db
+    const updated = await this.db
       .updateTable('category')
       .returningAll()
       .set(rest)
       .where('id', '=', category.id)
       .executeTakeFirstOrThrow();
 
-    return toDomain(updated);
+    return this.#toDomain(updated);
   }
-
-  return {
-    find,
-    findChildren,
-    findHierarchy,
-    findByActivityId,
-    create,
-    update,
-  };
 }

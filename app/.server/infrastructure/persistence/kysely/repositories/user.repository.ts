@@ -3,65 +3,60 @@ import type { DB } from '../types/db';
 import type { UserRepository } from '~/.server/core/ports/spi/persistence/user.repository';
 import type { User, UserId } from '~/.server/core/models/user';
 
-type UserRepositoryContext = {
-  db: Kysely<DB>;
-};
-
 type UserDb = Selectable<DB['user']>;
-export function KyselyUserRepository(
-  context: UserRepositoryContext
-): UserRepository {
-  const { db } = context;
 
-  function toDomain(user: UserDb): User {
+export class KyselyUserRepository implements UserRepository {
+  constructor(protected readonly db: Kysely<DB>) {}
+
+  #toDomain(user: UserDb): User {
     return {
       ...user,
       id: user.id as UserId,
     };
   }
-  async function find(id: UserId) {
-    const user = await db
+  async find(id: UserId) {
+    const user = await this.db
       .selectFrom('user')
       .selectAll()
       .where('id', '=', id)
       .executeTakeFirst();
 
-    return user ? toDomain(user) : null;
+    return user ? this.#toDomain(user) : null;
   }
 
-  async function findByEmail(email: string) {
-    const user = await db
+  async findByEmail(email: string) {
+    const user = await this.db
       .selectFrom('user')
       .selectAll()
       .where('email', '=', email)
       .executeTakeFirst();
 
-    return user ? toDomain(user) : null;
+    return user ? this.#toDomain(user) : null;
   }
 
-  async function create(user: User) {
-    const inserted = await db
+  async create(user: User) {
+    const inserted = await this.db
       .insertInto('user')
       .returningAll()
       .values(user)
       .executeTakeFirstOrThrow();
 
-    return toDomain(inserted);
+    return this.#toDomain(inserted);
   }
 
-  async function update(user: User) {
+  async update(user: User) {
     const { id, ...rest } = user;
-    const updated = await db
+    const updated = await this.db
       .updateTable('user')
       .returningAll()
       .set(rest)
       .where('id', '=', user.id)
       .executeTakeFirstOrThrow();
 
-    return toDomain(updated);
+    return this.#toDomain(updated);
   }
 
-  return { find, findByEmail, create, update };
+  async delete(id: UserId) {
+    await this.db.deleteFrom('user').where('id', '=', id).execute();
+  }
 }
-
-export type KyselyUserRepository = ReturnType<typeof KyselyUserRepository>;

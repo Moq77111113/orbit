@@ -1,15 +1,14 @@
 import { sql, type InferResult, type Kysely } from 'kysely';
 import type { DB } from '../types/db';
 
-import type { ItemRepository } from '~/.server/core/ports/spi/persistence/item.repository';
+import type {
+  ItemCreate,
+  ItemRepository,
+} from '~/.server/core/ports/spi/persistence/item.repository';
 
 import type { Item, ItemId } from '~/.server/core/models/item';
 import type { Person, PersonId } from '~/.server/core/models/person';
 import type { Category, CategoryId } from '~/.server/core/models/category';
-
-type ItemRepositoryContext = {
-  db: Kysely<DB>;
-};
 
 const query = (db: Kysely<DB>) =>
   db
@@ -38,12 +37,10 @@ const query = (db: Kysely<DB>) =>
 
 type ItemWithClaims = InferResult<ReturnType<typeof query>>[number];
 
-export function KyselyItemRepository(
-  context: ItemRepositoryContext
-): ItemRepository {
-  const { db } = context;
+export class KyselyItemRepository implements ItemRepository {
+  constructor(protected readonly db: Kysely<DB>) {}
 
-  function toDomain(item: ItemWithClaims): Item {
+  #toDomain(item: ItemWithClaims): Item {
     const { id, claims, category_id, ...rest } = item;
     const claimIds = claims.split(',').filter(Boolean); // TODO: parse using zod or similar
     return {
@@ -57,40 +54,42 @@ export function KyselyItemRepository(
     };
   }
 
-  async function find(id: ItemId) {
-    const item = await query(db).where('item.id', '=', id).executeTakeFirst();
+  async find(id: ItemId) {
+    const item = await query(this.db)
+      .where('item.id', '=', id)
+      .executeTakeFirst();
     if (!item) return null;
 
-    return toDomain(item);
+    return this.#toDomain(item);
   }
 
-  async function findOrThrow(id: ItemId) {
-    const item = await find(id);
+  async #findOrThrow(id: ItemId) {
+    const item = await this.find(id);
     if (!item) throw new Error('Item not found');
     return item;
   }
-  async function create(item: Omit<Item, 'claimedByIds'>) {
-    const { id } = await db
+  async create(item: ItemCreate) {
+    const { id } = await this.db
       .insertInto('item')
       .values(item)
       .returning('id')
       .executeTakeFirstOrThrow();
 
-    return await findOrThrow(id as ItemId);
+    return await this.#findOrThrow(id as ItemId);
   }
 
-  async function update(item: Item) {
-    const { id } = await db
+  async update(item: Item) {
+    const { id } = await this.db
       .updateTable('item')
       .returning('id')
       .set(item)
       .where('id', '=', item.id)
       .executeTakeFirstOrThrow();
-    return await findOrThrow(id as ItemId);
+    return await this.#findOrThrow(id as ItemId);
   }
 
-  async function claim(itemId: ItemId, person: Person) {
-    const res = await db
+  async claim(itemId: ItemId, person: Person) {
+    const res = await this.db
       .insertInto('item_claim')
       .values({ item_id: itemId, claim_id: person.id })
       .returning('item_id')
@@ -98,11 +97,11 @@ export function KyselyItemRepository(
 
     if (!res?.item_id) throw new Error('Claim failed');
 
-    return await findOrThrow(res.item_id as ItemId);
+    return await this.#findOrThrow(res.item_id as ItemId);
   }
 
-  async function unclaim(itemId: ItemId, person: Person) {
-    const res = await db
+  async unclaim(itemId: ItemId, person: Person) {
+    const res = await this.db
       .deleteFrom('item_claim')
       .where('item_id', '=', itemId)
       .where('claim_id', '=', person.id)
@@ -110,11 +109,11 @@ export function KyselyItemRepository(
 
     if (!res) throw new Error('Unclaim failed');
 
-    return await findOrThrow(itemId);
+    return await this.#findOrThrow(itemId);
   }
 
-  async function findWithDetails(id: ItemId) {
-    const result = await db
+  async findWithDetails(id: ItemId) {
+    const result = await this.db
       .selectFrom('item')
       .innerJoin('item_claim', 'item.id', 'item_claim.item_id')
       .innerJoin('person', 'item_claim.claim_id', 'person.id')
@@ -193,13 +192,4 @@ export function KyselyItemRepository(
       category,
     };
   }
-
-  return {
-    find,
-    create,
-    update,
-    claim,
-    unclaim,
-    findWithDetails,
-  };
 }
