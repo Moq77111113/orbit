@@ -3,7 +3,7 @@ import { Kysely } from 'kysely';
 
 export async function up(db: Kysely<any>) {
   await db.schema
-    .createTable('event_type')
+    .createTable('activity_type')
     .addColumn('id', 'varchar', (col) => col.primaryKey().notNull())
     .addColumn('name', 'varchar', (col) => col.notNull())
     .addColumn('created_at', 'timestamp', (col) =>
@@ -16,5 +16,5 @@ export async function up(db: Kysely<any>) {
 }
 
 export async function down(db: Kysely<any>) {
-  await db.schema.dropTable('event_type').execute();
+  await db.schema.dropTable('activity_type').execute();
 }

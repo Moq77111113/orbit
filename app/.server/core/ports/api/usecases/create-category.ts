@@ -1,5 +1,5 @@
 import type { Category } from '~/.server/core/models/category';
-import type { Event } from '~/.server/core/models/event';
+import type { Activity } from '~/.server/core/models/activity';
 
 type CreateCategoryRequest = Omit<
   Category,
@@ -7,5 +7,5 @@ type CreateCategoryRequest = Omit<
 >;
 
 export type AddCategory = {
-  (event: Event, request: CreateCategoryRequest): Promise<Category>;
+  (activity: Activity, request: CreateCategoryRequest): Promise<Category>;
 };

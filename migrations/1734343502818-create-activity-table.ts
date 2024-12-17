@@ -3,15 +3,16 @@ import { Kysely } from 'kysely';
 
 export async function up(db: Kysely<any>) {
   await db.schema
-    .createTable('event')
+    .createTable('activity')
     .addColumn('id', 'varchar', (col) => col.primaryKey().notNull())
     .addColumn('name', 'varchar', (col) => col.notNull())
     .addColumn('type_id', 'varchar', (col) =>
-      col.references('event_type.id').onDelete('set null')
+      col.references('activity_type.id').onDelete('set null')
     )
     .addColumn('host_id', 'varchar', (col) =>
-      col.references('user.id').onDelete('cascade')
+      col.references('person.id').onDelete('cascade')
     )
+    .addColumn('date', 'timestamp', (col) => col.notNull())
     .addColumn('description', 'text')
     .addColumn('created_at', 'timestamp', (col) =>
       col.defaultTo(sql`current_timestamp`).notNull()
@@ -23,5 +24,5 @@ export async function up(db: Kysely<any>) {
 }
 
 export async function down(db: Kysely<any>) {
-  await db.schema.dropTable('event').execute();
+  await db.schema.dropTable('activity').execute();
 }

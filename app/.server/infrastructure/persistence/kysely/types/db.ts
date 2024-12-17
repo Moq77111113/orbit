@@ -9,17 +9,9 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
-export interface Category {
+export interface Activity {
   created_at: Generated<string>;
-  description: string | null;
-  id: string;
-  name: string;
-  parent_id: string | null;
-  updated_at: Generated<string>;
-}
-
-export interface Event {
-  created_at: Generated<string>;
+  date: string;
   description: string | null;
   host_id: string | null;
   id: string;
@@ -28,20 +20,29 @@ export interface Event {
   updated_at: Generated<string>;
 }
 
-export interface EventCategory {
+export interface ActivityCategory {
+  activity_id: string | null;
   category_id: string | null;
-  event_id: string | null;
 }
 
-export interface EventGuest {
-  event_id: string | null;
+export interface ActivityGuest {
+  activity_id: string | null;
   guest_id: string | null;
 }
 
-export interface EventType {
+export interface ActivityType {
   created_at: Generated<string>;
   id: string;
   name: string;
+  updated_at: Generated<string>;
+}
+
+export interface Category {
+  created_at: Generated<string>;
+  description: string | null;
+  id: string;
+  name: string;
+  parent_id: string | null;
   updated_at: Generated<string>;
 }
 
@@ -77,11 +78,11 @@ export interface User {
 }
 
 export interface DB {
+  activity: Activity;
+  activity_category: ActivityCategory;
+  activity_guest: ActivityGuest;
+  activity_type: ActivityType;
   category: Category;
-  event: Event;
-  event_category: EventCategory;
-  event_guest: EventGuest;
-  event_type: EventType;
   item: Item;
   item_claim: ItemClaim;
   person: Person;

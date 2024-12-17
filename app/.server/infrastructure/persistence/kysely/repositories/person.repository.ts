@@ -1,23 +1,18 @@
-import type { Kysely } from 'kysely';
-import type { Database } from '../types';
+import type { InferResult, Kysely, Selectable } from 'kysely';
+
 import type { PersonRepository } from '~/.server/core/ports/spi/persistence/person.repository';
-import type { PersonDb } from '../types/person';
 import type { Person, PersonId } from '~/.server/core/models/person';
-import type { KyselyUserRepository } from './user.repository';
-import type { User, UserId } from '~/.server/core/models/user';
+import type { UserId } from '~/.server/core/models/user';
 import { jsonBuildObject } from 'kysely/helpers/sqlite';
+import type { DB } from '../types/db';
+import { c } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
 
 type PersonRepositoryContext = {
-  db: Kysely<Database>;
-  userRepo: KyselyUserRepository;
+  db: Kysely<DB>;
 };
 
-export function KyselyPersonRepository(
-  context: PersonRepositoryContext
-): PersonRepository {
-  const { db, userRepo } = context;
-
-  const query = db
+const query = (db: Kysely<DB>) =>
+  db
     .selectFrom('person')
     .leftJoin('user', 'person.user_id', 'user.id')
     .select((eb) => [
@@ -29,9 +24,14 @@ export function KyselyPersonRepository(
         email: eb.ref('user.email'),
       }).as('user'),
     ]);
-  function toDomain(
-    person: Awaited<ReturnType<(typeof query)['execute']>>[number]
-  ): Person {
+
+type PersonWithUser = InferResult<ReturnType<typeof query>>[number];
+export function KyselyPersonRepository(
+  context: PersonRepositoryContext
+): PersonRepository {
+  const { db } = context;
+
+  function toDomain(person: PersonWithUser): Person {
     const { id, profile_image, user, name } = person;
     return {
       name,
@@ -48,7 +48,7 @@ export function KyselyPersonRepository(
   }
 
   async function find(id: PersonId) {
-    const person = await query.where('person.id', '=', id).executeTakeFirst();
+    const person = await query(db).where('person.id', '=', id).executeTakeFirst();
     if (!person) return null;
     return toDomain(person);
   }

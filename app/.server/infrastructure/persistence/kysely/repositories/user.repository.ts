@@ -1,13 +1,13 @@
-import type { Kysely } from 'kysely';
-import type { Database } from '../types';
+import type { Kysely, Selectable } from 'kysely';
+import type { DB } from '../types/db';
 import type { UserRepository } from '~/.server/core/ports/spi/persistence/user.repository';
 import type { User, UserId } from '~/.server/core/models/user';
-import type { UserDb } from '../types/user';
 
 type UserRepositoryContext = {
-  db: Kysely<Database>;
+  db: Kysely<DB>;
 };
 
+type UserDb = Selectable<DB['user']>;
 export function KyselyUserRepository(
   context: UserRepositoryContext
 ): UserRepository {

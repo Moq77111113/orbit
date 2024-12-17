@@ -1,13 +1,23 @@
-import type { Category, CategoryId } from '~/core/models/category';
-import type { Item } from '~/core/models/item';
+import type { ActivityId } from '~/.server/core/models/activity';
+import type {
+  Category,
+  CategoryHierarchy,
+  CategoryId,
+} from '~/core/models/category';
 
-type CategoryCommand = {
-  addItem(id: CategoryId, item: Item): Promise<Category>;
-  addChild(id: CategoryId, child: Category): Promise<Category>;
+type CategoryQuery = {
+  find(id: CategoryId): Promise<Category | null>;
+  findChildren(id: CategoryId): Promise<Category[]>;
+  findHierarchy(
+    id: CategoryId,
+    depth?: number
+  ): Promise<CategoryHierarchy | null>;
+  findByActivityId(activityId: ActivityId): Promise<Category[]>;
 };
 
-export type CategoryRepository = Repository<
-  CategoryId,
-  Category,
-  CategoryCommand
->;
+type CategoryCommand = {
+  create(category: Category): Promise<Category>;
+  update(category: Category): Promise<Category>;
+};
+
+export type CategoryRepository = CategoryQuery & CategoryCommand;

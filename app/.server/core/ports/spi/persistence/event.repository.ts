@@ -1,16 +1,19 @@
-import type { Event, EventId } from '~/core/models/event';
+import type { Activity, ActivityId } from '~/.server/core/models/activity';
 import type { PersonId } from '~/core/models/person';
 
-type EventQuery = {
-  findByHost(hostId: PersonId): Promise<Event[]>;
+type ActivityQuery = {
+  find(id: ActivityId): Promise<Activity | null>;
+  findByHost(hostId: PersonId): Promise<Activity[]>;
 };
 
-type EventCommand = {
-  delete(id: EventId): Promise<void>;
+type ActivityCommand = {
+  create(
+    activity: Omit<Activity, 'createdAt' | 'updatedAt'>
+  ): Promise<Activity>;
+  update(
+    activity: Omit<Activity, 'createdAt' | 'updatedAt'>
+  ): Promise<Activity>;
+  delete(id: ActivityId): Promise<void>;
 };
 
-export type EventRepository = Repository<
-  EventId,
-  Event,
-  EventQuery & EventCommand
->;
+export type ActivityRepository = ActivityQuery & ActivityCommand;
