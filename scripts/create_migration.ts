@@ -1,4 +1,3 @@
-// script to create a timestamped file in the migrations folder
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 const createMigration = async (name: string, args: Record<string, string>) => {
@@ -17,9 +16,8 @@ const createMigration = async (name: string, args: Record<string, string>) => {
   await writeFile(`./migrations/${migrationName}`, stub);
 };
 
-const [, , name, prefix = name.slice(0, 3).toLocaleLowerCase()] = process.argv;
+const [, , name] = process.argv;
 
 await createMigration(name, {
   TABLE_NAME: name,
-  PREFIX: prefix
 });

@@ -3,7 +3,7 @@ import { Kysely } from 'kysely';
 export async function up(db: Kysely<any>) {
   await db.schema
     .createTable('category')
-    .addColumn('id', 'varchar', (col) => col.primaryKey())
+    .addColumn('id', 'varchar', (col) => col.primaryKey().notNull())
     .addColumn('name', 'varchar', (col) => col.notNull())
     .addColumn('description', 'text')
     .addColumn('parent_id', 'varchar', (col) => col.references('category.id'))

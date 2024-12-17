@@ -2,16 +2,16 @@ import * as path from 'path';
 
 import { promises as fs } from 'fs';
 import { Kysely, Migrator, SqliteDialect, FileMigrationProvider } from 'kysely';
-import { type Database } from '~/.server/infrastructure/persistence/kysely/types';
 
 import SQLite from 'better-sqlite3';
+
 
 const dialect = new SqliteDialect({
   database: new SQLite('db.sqlite'),
 });
 
 async function migrateToLatest() {
-  const db = new Kysely<Database>({
+  const db = new Kysely<unknown>({
     dialect,
   });
 

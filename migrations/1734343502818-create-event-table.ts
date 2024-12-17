@@ -4,7 +4,7 @@ import { Kysely } from 'kysely';
 export async function up(db: Kysely<any>) {
   await db.schema
     .createTable('event')
-    .addColumn('id', 'varchar', (col) => col.primaryKey())
+    .addColumn('id', 'varchar', (col) => col.primaryKey().notNull())
     .addColumn('name', 'varchar', (col) => col.notNull())
     .addColumn('type_id', 'varchar', (col) =>
       col.references('event_type.id').onDelete('set null')

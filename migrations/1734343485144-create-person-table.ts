@@ -3,8 +3,8 @@ import { Kysely } from 'kysely';
 
 export async function up(db: Kysely<any>) {
   await db.schema
-    .createTable('item')
-    .addColumn('id', 'varchar', (col) => col.primaryKey())
+    .createTable('person')
+    .addColumn('id', 'varchar', (col) => col.primaryKey().notNull())
     .addColumn('name', 'varchar', (col) => col.notNull())
     .addColumn('profile_image', 'varchar')
     .addColumn('user_id', 'varchar', (col) =>

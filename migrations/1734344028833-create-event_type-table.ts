@@ -4,7 +4,7 @@ import { Kysely } from 'kysely';
 export async function up(db: Kysely<any>) {
   await db.schema
     .createTable('event_type')
-    .addColumn('id', 'varchar', (col) => col.primaryKey())
+    .addColumn('id', 'varchar', (col) => col.primaryKey().notNull())
     .addColumn('name', 'varchar', (col) => col.notNull())
     .addColumn('created_at', 'timestamp', (col) =>
       col.defaultTo(sql`current_timestamp`).notNull()

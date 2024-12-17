@@ -8,7 +8,8 @@
     "start": "cross-env NODE_ENV=production react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
     "create-migration": "tsx scripts/create_migration.ts",
-    "migrate": "tsx scripts/migrate.ts"
+    "migrate": "tsx scripts/migrate.ts",
+    "codegen": "kysely-codegen --out-file ./app/.server/infrastructure/persistence/kysely/types/db.ts"
   },
   "dependencies": {
     "@react-router/fs-routes": "^7.0.2",
@@ -30,6 +31,7 @@
     "@types/react-dom": "^19.0.1",
     "autoprefixer": "^10.4.20",
     "cross-env": "^7.0.3",
+    "kysely-codegen": "^0.17.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2",
