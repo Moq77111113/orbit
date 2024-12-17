@@ -5,8 +5,13 @@ import type {
   CategoryHierarchy,
   CategoryId,
 } from '~/.server/core/models/category';
-import type { CategoryRepository } from '~/.server/core/ports/spi/persistence/category.repository';
+import type {
+  CategoryRepository,
+  CreateCategory,
+} from '~/.server/core/ports/spi/persistence/category.repository';
 import type { DB } from '../types/db';
+import { generateId } from '~/.server/infrastructure/generators/id.generator';
+import { c } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
 
 const query = (db: Kysely<DB>) =>
   db
@@ -21,7 +26,10 @@ const query = (db: Kysely<DB>) =>
 type CategoryWithParent = InferResult<ReturnType<typeof query>>[number];
 
 export class KyselyCategoryRepository implements CategoryRepository {
-  constructor(protected readonly db: Kysely<DB>) {}
+  constructor(
+    protected readonly db: Kysely<DB>,
+    protected readonly generateCategoryId = generateId('cat')
+  ) {}
 
   #toDomain(category: CategoryWithParent): Category {
     const { id, name, description, parent_id } = category;
@@ -102,11 +110,14 @@ export class KyselyCategoryRepository implements CategoryRepository {
     return categories.map(this.#toDomain.bind(this));
   }
 
-  async create(category: Category) {
+  async create(category: CreateCategory) {
     const inserted = await this.db
       .insertInto('category')
       .returningAll()
-      .values(category)
+      .values({
+        ...category,
+        id: this.generateCategoryId(),
+      })
       .executeTakeFirstOrThrow();
 
     return this.#toDomain(inserted);

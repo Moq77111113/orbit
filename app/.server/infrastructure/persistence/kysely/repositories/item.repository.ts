@@ -9,6 +9,7 @@ import type {
 import type { Item, ItemId } from '~/.server/core/models/item';
 import type { Person, PersonId } from '~/.server/core/models/person';
 import type { Category, CategoryId } from '~/.server/core/models/category';
+import { generateId } from '~/.server/infrastructure/generators/id.generator';
 
 const query = (db: Kysely<DB>) =>
   db
@@ -38,7 +39,10 @@ const query = (db: Kysely<DB>) =>
 type ItemWithClaims = InferResult<ReturnType<typeof query>>[number];
 
 export class KyselyItemRepository implements ItemRepository {
-  constructor(protected readonly db: Kysely<DB>) {}
+  constructor(
+    protected readonly db: Kysely<DB>,
+    protected readonly generateItemId = generateId('itm')
+  ) {}
 
   #toDomain(item: ItemWithClaims): Item {
     const { id, claims, category_id, ...rest } = item;
@@ -71,7 +75,7 @@ export class KyselyItemRepository implements ItemRepository {
   async create(item: ItemCreate) {
     const { id } = await this.db
       .insertInto('item')
-      .values(item)
+      .values({ ...item, id: this.generateItemId() })
       .returning('id')
       .executeTakeFirstOrThrow();
 

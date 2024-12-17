@@ -1,12 +1,19 @@
 import type { Kysely, Selectable } from 'kysely';
 import type { DB } from '../types/db';
-import type { UserRepository } from '~/.server/core/ports/spi/persistence/user.repository';
+import type {
+  CreateUser,
+  UserRepository,
+} from '~/.server/core/ports/spi/persistence/user.repository';
 import type { User, UserId } from '~/.server/core/models/user';
+import { generateId } from '~/.server/infrastructure/generators/id.generator';
 
 type UserDb = Selectable<DB['user']>;
 
 export class KyselyUserRepository implements UserRepository {
-  constructor(protected readonly db: Kysely<DB>) {}
+  constructor(
+    protected readonly db: Kysely<DB>,
+    protected readonly generateUserId = generateId('usr')
+  ) {}
 
   #toDomain(user: UserDb): User {
     return {
@@ -34,11 +41,14 @@ export class KyselyUserRepository implements UserRepository {
     return user ? this.#toDomain(user) : null;
   }
 
-  async create(user: User) {
+  async create(user: CreateUser) {
     const inserted = await this.db
       .insertInto('user')
       .returningAll()
-      .values(user)
+      .values({
+        ...user,
+        id: this.generateUserId(),
+      })
       .executeTakeFirstOrThrow();
 
     return this.#toDomain(inserted);

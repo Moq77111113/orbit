@@ -1,9 +1,13 @@
-import type { InferResult, Kysely } from 'kysely';
+import type { InferResult, Insertable, Kysely, Transaction } from 'kysely';
 import type { DB } from '../types/db';
 import crypto from 'node:crypto';
-import type { ActivityRepository } from '~/.server/core/ports/spi/persistence/activity.repository';
+import type {
+  ActivityRepository,
+  CreateActivity,
+} from '~/.server/core/ports/spi/persistence/activity.repository';
 import type { Activity, ActivityId } from '~/.server/core/models/activity';
 import type { PersonId } from '~/.server/core/models/person';
+import { generateId } from '~/.server/infrastructure/generators/id.generator';
 
 const query = (db: Kysely<DB>) =>
   db
@@ -27,7 +31,11 @@ const query = (db: Kysely<DB>) =>
 
 type ActivityWithGuests = InferResult<ReturnType<typeof query>>[number];
 export class KyselyActivityRepository implements ActivityRepository {
-  constructor(protected readonly db: Kysely<DB>) {}
+  constructor(
+    protected readonly db: Kysely<DB>,
+    protected readonly generateActivityId = generateId('ac'),
+    protected readonly generateActivityTypeId = generateId('act')
+  ) {}
 
   #toDomain(activity: ActivityWithGuests): Activity {
     const { id, guestIds, host_id, ...rest } = activity;
@@ -65,56 +73,84 @@ export class KyselyActivityRepository implements ActivityRepository {
     return activities.map(this.#toDomain.bind(this));
   }
 
-  async create(activity: Activity) {
+  async #execInTransaction<T>(op: (trx: Transaction<DB>) => Promise<T>) {
+    return await this.db.transaction().execute(op);
+  }
+
+  async #getOrCreateActivityType(
+    trx: Transaction<DB>,
+    type: Insertable<DB['activity_type']>
+  ) {
+    const result = await trx
+      .insertInto('activity_type')
+      .values(type)
+      .onConflict((oc) => oc.doNothing())
+      .returning('id')
+      .executeTakeFirstOrThrow();
+
+    return result.id;
+  }
+
+  async #createActivity(
+    trx: Transaction<DB>,
+    activity: Insertable<DB['activity']>
+  ) {
+    const created = await trx
+      .insertInto('activity')
+      .values(activity)
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    return created.id as ActivityId;
+  }
+
+  async #addGuests(
+    trx: Transaction<DB>,
+    activityId: ActivityId,
+    guestIds: PersonId[]
+  ) {
+    await trx
+      .insertInto('activity_guest')
+      .values(
+        guestIds.map((guestId) => ({
+          activity_id: activityId,
+          guest_id: guestId,
+        }))
+      )
+      .execute();
+  }
+
+  async create(activity: CreateActivity) {
     const { type, guestIds, ...rest } = activity;
-    const trx = await this.db.transaction().execute(async (trx) => {
-      const type = await trx
-        .insertInto('activity_type')
-        .values({
-          name: activity.type,
-          id: crypto.randomUUID(),
-        })
-        .onConflict((oc) => oc.doNothing())
-        .returning('id')
-        .executeTakeFirstOrThrow();
+    const createdActivity = await this.#execInTransaction(async (trx) => {
+      const typeId = await this.#getOrCreateActivityType(trx, {
+        id: this.generateActivityTypeId(),
+        name: type,
+      });
 
-      const created = await trx
-        .insertInto('activity')
-        .values({
-          ...rest,
-          id: rest.id,
-          type_id: type.id,
-          date: rest.date.getTime().toString(),
-        })
-        .returning('id')
-        .executeTakeFirstOrThrow();
+      const created = await this.#createActivity(trx, {
+        id: this.generateActivityId(),
+        ...rest,
+        type_id: typeId,
+        date: rest.date.getTime().toString(),
+      });
 
-      await trx
-        .insertInto('activity_guest')
-        .values(
-          guestIds.map((guestId) => ({
-            activity_id: created.id,
-            guest_id: guestId,
-          }))
-        )
-
-        .execute();
+      this.#addGuests(trx, created, guestIds);
       return created;
     });
 
-    return await this.#findOrThrow(trx.id as ActivityId);
+    return await this.#findOrThrow(createdActivity);
   }
 
   async update(
     activity: Pick<Activity, 'id' | 'date' | 'description' | 'name'>
   ) {
-    const { id, ...rest } = activity;
+    const { id, date, ...rest } = activity;
     const updated = await this.db
       .updateTable('activity')
       .returning('id')
       .set({
         ...rest,
-        date: rest.date.getTime().toString(),
+        date: date.getTime().toString(),
       })
       .where('id', '=', activity.id)
       .executeTakeFirstOrThrow();

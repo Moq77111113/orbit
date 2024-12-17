@@ -5,7 +5,7 @@ export async function up(db: Kysely<any>) {
   await db.schema
     .createTable('activity_type')
     .addColumn('id', 'varchar', (col) => col.primaryKey().notNull())
-    .addColumn('name', 'varchar', (col) => col.notNull())
+    .addColumn('name', 'varchar', (col) => col.notNull().unique())
     .addColumn('created_at', 'timestamp', (col) =>
       col.defaultTo(sql`current_timestamp`).notNull()
     )

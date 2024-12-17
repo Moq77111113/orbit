@@ -1,10 +1,14 @@
 import type { InferResult, Kysely, Selectable } from 'kysely';
 
-import type { PersonRepository } from '~/.server/core/ports/spi/persistence/person.repository';
+import type {
+  CreatePerson,
+  PersonRepository,
+} from '~/.server/core/ports/spi/persistence/person.repository';
 import type { Person, PersonId } from '~/.server/core/models/person';
 import type { UserId } from '~/.server/core/models/user';
 import { jsonBuildObject } from 'kysely/helpers/sqlite';
 import type { DB } from '../types/db';
+import { generateId } from '~/.server/infrastructure/generators/id.generator';
 
 const query = (db: Kysely<DB>) =>
   db
@@ -23,7 +27,10 @@ const query = (db: Kysely<DB>) =>
 type PersonWithUser = InferResult<ReturnType<typeof query>>[number];
 
 export class KyselyPersonRepository implements PersonRepository {
-  constructor(protected readonly db: Kysely<DB>) {}
+  constructor(
+    protected readonly db: Kysely<DB>,
+    protected readonly generatePersonId = generateId('per')
+  ) {}
 
   #toDomain(person: PersonWithUser): Person {
     const { id, profile_image, user, name } = person;
@@ -55,12 +62,13 @@ export class KyselyPersonRepository implements PersonRepository {
     return person;
   }
 
-  async create(person: Person) {
+  async create(person: CreatePerson) {
     const inserted = await this.db
       .insertInto('person')
       .values({
         ...person,
         user_id: person.user?.id,
+        id: this.generatePersonId(),
       })
       .returning('id')
       .executeTakeFirstOrThrow();

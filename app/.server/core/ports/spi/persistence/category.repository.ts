@@ -5,7 +5,7 @@ import type {
   CategoryId,
 } from '~/core/models/category';
 
-type CreateCategory = Omit<Category, 'id'>;
+export type CreateCategory = Omit<Category, 'id'>;
 export interface CategoryRepository {
   find(id: CategoryId): Promise<Category | null>;
   findChildren(id: CategoryId): Promise<Category[]>;

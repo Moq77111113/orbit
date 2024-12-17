@@ -1,7 +1,7 @@
 import type { DetailledItem, Item, ItemId } from '~/core/models/item';
 import type { Person } from '~/core/models/person';
 
-export type ItemCreate = Omit<Item, 'claimedByIds'>;
+export type ItemCreate = Omit<Item, 'id' | 'claimedByIds'>;
 
 export interface ItemRepository {
   find(id: ItemId): Promise<Item | null>;

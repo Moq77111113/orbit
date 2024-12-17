@@ -1,7 +1,7 @@
 import type { Activity, ActivityId } from '~/.server/core/models/activity';
 import type { PersonId } from '~/core/models/person';
 
-type CreateActivity = Omit<Activity, 'id'>;
+export type CreateActivity = Omit<Activity, 'id'>;
 
 export interface ActivityRepository {
   find(id: ActivityId): Promise<Activity | null>;
